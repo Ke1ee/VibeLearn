@@ -5,9 +5,11 @@ node_modules/
 .yarn/install-state.gz
 
 # build output
+# note: `build/` is NOT ignored — that's electron-builder's resources dir
+# (icons + entitlements). Build *output* goes to `out/` (electron-vite) and
+# `dist/` (electron-builder packaging).
 dist/
 out/
-build/
 .next/
 *.tsbuildinfo
 
