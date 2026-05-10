@@ -4,7 +4,7 @@
 
 A standalone Electron app that adds a live narrator side panel for Claude Code, plus a learning layer that compounds over time. Built for "you, six months ago" — the student using AI to code who's getting lost in the firehose.
 
-**Status:** v1 sprint 1 done — live event pipeline (Hono server → SQLite → React EventList). Twitch styling and translation come in v1.5.
+**Status:** v1 done — event pipeline + replay-on-launch + filters + BYO API key. Twitch styling and Haiku translation come in v1.5.
 
 ## Try it
 
@@ -71,8 +71,8 @@ Phased build:
 |---|---|---|
 | Pre-week | Validate CC hooks → localhost flow + scaffold blank Electron app | ✅ done |
 | v1 sprint 1 | Hono event server in main, SQLite store, IPC, raw events list | ✅ done |
-| v1 sprint 2 | Replay events from SQLite on launch, settings UI for BYO API key, filters | next |
-| v1.5 | Twitch-chat UI + Haiku translation streaming | after |
+| v1 sprint 2 | Replay on launch, event-type & session filters, clear button, BYO API key via safeStorage | ✅ done |
+| v1.5 | Loud/exotic Twitch-chat UI + Haiku 4.5 translation streaming | next |
 | v2 | End-of-session lesson digest, keyword-based concept extraction | later |
 | v3 | Concept graph view (built on accumulated SQLite data) | later |
 
@@ -91,4 +91,4 @@ If both halves work, you've validated the riskiest assumptions. Total time: ~2 e
 
 - **2026-05-07:** initial plan via `/office-hours`. Recommended Conductor fork (Approach A).
 - **2026-05-08:** discovered Conductor (Melty Labs) isn't open source. Pivoted to standalone Electron app (Approach B). Scaffolded electron-vite + React + TS + pre-week validation infra.
-- **2026-05-10:** pre-week validation passed cleanly (all 4 hook types streamed). v1 sprint 1 landed: Hono event server inside Electron main, better-sqlite3 store, IPC dispatch to renderer, live EventList view.
+- **2026-05-10:** pre-week validation passed cleanly (all 4 hook types streamed). v1 sprint 1 landed: Hono event server inside Electron main, better-sqlite3 store, IPC dispatch to renderer, live EventList view. v1 sprint 2 landed same day: replay events on launch, event-type filter chips, session-id dropdown filter, clear button, BYO Anthropic API key via Electron `safeStorage`.
