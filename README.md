@@ -4,7 +4,16 @@
 
 A standalone Electron app that adds a live narrator side panel for Claude Code, plus a learning layer that compounds over time. Built for "you, six months ago" — the student using AI to code who's getting lost in the firehose.
 
-**Status:** pre-week assignment phase. No product code yet.
+**Status:** v1 sprint 1 done — live event pipeline (Hono server → SQLite → React EventList). Twitch styling and translation come in v1.5.
+
+## Try it
+
+```bash
+npm install
+npm run dev          # opens the Electron window, event server listens on :9999
+```
+
+In a separate project, drop `dev-hooks/settings.json` into `.claude/settings.json`, then `claude` whatever you want. Events stream into the VibeLearn window live and persist to SQLite at `~/Library/Application Support/vibelearn/events.sqlite` (macOS).
 
 ## What this is
 
@@ -58,13 +67,14 @@ CC's built-in hooks system broadcasts every tool call. VibeLearn just listens.
 
 Phased build:
 
-| Phase | Scope | Time |
+| Phase | Scope | Status |
 |---|---|---|
-| Pre-week | Validate CC hooks → localhost flow + scaffold blank Electron app | ~2 evenings |
-| v1 | Electron app, hooks ingestion, SQLite, raw events list view | ~2 weeks |
-| v1.5 | Twitch-chat UI + Haiku translation streaming | +2 weeks |
-| v2 | End-of-session lesson digest, keyword-based concept extraction | +2 weeks |
-| v3 | Concept graph view (built on accumulated SQLite data) | +4-6 weeks |
+| Pre-week | Validate CC hooks → localhost flow + scaffold blank Electron app | ✅ done |
+| v1 sprint 1 | Hono event server in main, SQLite store, IPC, raw events list | ✅ done |
+| v1 sprint 2 | Replay events from SQLite on launch, settings UI for BYO API key, filters | next |
+| v1.5 | Twitch-chat UI + Haiku translation streaming | after |
+| v2 | End-of-session lesson digest, keyword-based concept extraction | later |
+| v3 | Concept graph view (built on accumulated SQLite data) | later |
 
 ## Pre-week assignment (do this first)
 
@@ -80,4 +90,5 @@ If both halves work, you've validated the riskiest assumptions. Total time: ~2 e
 ## History
 
 - **2026-05-07:** initial plan via `/office-hours`. Recommended Conductor fork (Approach A).
-- **2026-05-08:** discovered Conductor (Melty Labs) isn't open source. Pivoted to standalone Electron app (Approach B). Timeline shifted from 2-3 weeks to ~4-6 weeks for v1. Architecture, UI direction, and learning features unchanged.
+- **2026-05-08:** discovered Conductor (Melty Labs) isn't open source. Pivoted to standalone Electron app (Approach B). Scaffolded electron-vite + React + TS + pre-week validation infra.
+- **2026-05-10:** pre-week validation passed cleanly (all 4 hook types streamed). v1 sprint 1 landed: Hono event server inside Electron main, better-sqlite3 store, IPC dispatch to renderer, live EventList view.
