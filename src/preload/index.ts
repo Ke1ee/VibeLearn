@@ -16,7 +16,18 @@ const vibelearn = {
     return () => {
       ipcRenderer.off('event:new', listener)
     }
-  }
+  },
+  getRecent: (limit = 50): Promise<StoredEvent[]> =>
+    ipcRenderer.invoke('vibelearn:getRecent', limit),
+  clearEvents: (): Promise<number> => ipcRenderer.invoke('vibelearn:clearEvents'),
+  recentSessions: (limit = 20): Promise<string[]> =>
+    ipcRenderer.invoke('vibelearn:recentSessions', limit),
+  hasApiKey: (): Promise<boolean> => ipcRenderer.invoke('vibelearn:hasApiKey'),
+  encryptionAvailable: (): Promise<boolean> =>
+    ipcRenderer.invoke('vibelearn:encryptionAvailable'),
+  setApiKey: (plainText: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('vibelearn:setApiKey', plainText),
+  clearApiKey: (): Promise<boolean> => ipcRenderer.invoke('vibelearn:clearApiKey')
 }
 
 if (process.contextIsolated) {

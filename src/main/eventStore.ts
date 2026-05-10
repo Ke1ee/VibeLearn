@@ -17,6 +17,8 @@ export type EventStore = {
     payload: unknown
   }) => StoredEvent
   recentEvents: (limit: number) => StoredEvent[]
+  clearAll: () => number
+  recentSessions: (limit: number) => string[]
   close: () => void
 }
 
@@ -47,6 +49,15 @@ export function openEventStore(userDataDir: string): EventStore {
   const recentStmt = db.prepare(
     `SELECT * FROM events ORDER BY id DESC LIMIT ?`
   )
+  const clearStmt = db.prepare(`DELETE FROM events`)
+  // Sessions with most recent activity first. Excludes null session ids.
+  const sessionsStmt = db.prepare(
+    `SELECT session_id FROM events
+     WHERE session_id IS NOT NULL
+     GROUP BY session_id
+     ORDER BY MAX(id) DESC
+     LIMIT ?`
+  )
 
   return {
     insertEvent: ({ event_type, session_id, payload }) => {
@@ -60,6 +71,9 @@ export function openEventStore(userDataDir: string): EventStore {
       return selectByIdStmt.get(result.lastInsertRowid) as StoredEvent
     },
     recentEvents: (limit) => recentStmt.all(limit) as StoredEvent[],
+    clearAll: () => clearStmt.run().changes,
+    recentSessions: (limit) =>
+      (sessionsStmt.all(limit) as { session_id: string }[]).map((row) => row.session_id),
     close: () => db.close()
   }
 }

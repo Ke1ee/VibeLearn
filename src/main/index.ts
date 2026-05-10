@@ -1,9 +1,16 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { startEventServer, type ServerHandle, type RawHookEvent } from './eventServer'
 import { openEventStore, type EventStore, type StoredEvent } from './eventStore'
+import {
+  initSettings,
+  hasApiKey,
+  setApiKey,
+  clearApiKey,
+  encryptionAvailable
+} from './settings'
 
 const EVENT_SERVER_PORT = 9999
 
@@ -67,6 +74,38 @@ function handleHookEvent(raw: RawHookEvent): void {
   }
 }
 
+function registerIpcHandlers(): void {
+  ipcMain.handle('vibelearn:getRecent', (_e, limit: number = 50) => {
+    if (!eventStore) return []
+    return eventStore.recentEvents(limit)
+  })
+
+  ipcMain.handle('vibelearn:clearEvents', () => {
+    if (!eventStore) return 0
+    return eventStore.clearAll()
+  })
+
+  ipcMain.handle('vibelearn:recentSessions', (_e, limit: number = 20) => {
+    if (!eventStore) return []
+    return eventStore.recentSessions(limit)
+  })
+
+  ipcMain.handle('vibelearn:hasApiKey', () => hasApiKey())
+  ipcMain.handle('vibelearn:encryptionAvailable', () => encryptionAvailable())
+  ipcMain.handle('vibelearn:setApiKey', (_e, plainText: string) => {
+    try {
+      setApiKey(plainText)
+      return { ok: true as const }
+    } catch (err) {
+      return { ok: false as const, error: (err as Error).message }
+    }
+  })
+  ipcMain.handle('vibelearn:clearApiKey', () => {
+    clearApiKey()
+    return true
+  })
+}
+
 app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.ke1ee.vibelearn')
 
@@ -74,7 +113,10 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  eventStore = openEventStore(app.getPath('userData'))
+  const userDataDir = app.getPath('userData')
+  eventStore = openEventStore(userDataDir)
+  initSettings(userDataDir)
+  registerIpcHandlers()
 
   try {
     eventServer = await startEventServer(EVENT_SERVER_PORT, handleHookEvent)
