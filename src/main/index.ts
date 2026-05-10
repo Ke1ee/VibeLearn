@@ -1,11 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { startEventServer, type ServerHandle, type RawHookEvent } from './eventServer'
+import { openEventStore, type EventStore, type StoredEvent } from './eventStore'
+
+const EVENT_SERVER_PORT = 9999
+
+let mainWindow: BrowserWindow | null = null
+let eventServer: ServerHandle | null = null
+let eventStore: EventStore | null = null
 
 function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -18,7 +25,11 @@ function createWindow(): void {
   })
 
   mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+    mainWindow?.show()
+  })
+
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -26,8 +37,6 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -35,40 +44,65 @@ function createWindow(): void {
   }
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+function handleHookEvent(raw: RawHookEvent): void {
+  if (!eventStore) return
 
-  // Default open or close DevTools by F12 in development
-  // and ignore CommandOrControl + R in production.
-  // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
+  const event_type =
+    typeof raw.hook_event_name === 'string'
+      ? raw.hook_event_name
+      : typeof raw.event === 'string'
+        ? raw.event
+        : 'Unknown'
+  const session_id =
+    typeof raw.session_id === 'string' && raw.session_id.length > 0 ? raw.session_id : null
+
+  const stored: StoredEvent = eventStore.insertEvent({
+    event_type,
+    session_id,
+    payload: raw
+  })
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('event:new', stored)
+  }
+}
+
+app.whenReady().then(async () => {
+  electronApp.setAppUserModelId('com.ke1ee.vibelearn')
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  eventStore = openEventStore(app.getPath('userData'))
+
+  try {
+    eventServer = await startEventServer(EVENT_SERVER_PORT, handleHookEvent)
+    console.log(`[vibelearn] event server listening on port ${eventServer.port}`)
+  } catch (err) {
+    console.error('[vibelearn] failed to start event server:', err)
+  }
 
   createWindow()
 
-  app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+app.on('before-quit', async () => {
+  if (eventServer) {
+    await eventServer.stop()
+    eventServer = null
+  }
+  if (eventStore) {
+    eventStore.close()
+    eventStore = null
+  }
+})
+
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
 })
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

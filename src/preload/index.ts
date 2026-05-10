@@ -1,16 +1,28 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
-// Custom APIs for renderer
-const api = {}
+export type StoredEvent = {
+  id: number
+  received_at: string
+  event_type: string
+  session_id: string | null
+  payload: string
+}
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
+const vibelearn = {
+  onEvent: (cb: (event: StoredEvent) => void): (() => void) => {
+    const listener = (_e: IpcRendererEvent, event: StoredEvent): void => cb(event)
+    ipcRenderer.on('event:new', listener)
+    return () => {
+      ipcRenderer.off('event:new', listener)
+    }
+  }
+}
+
 if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('vibelearn', vibelearn)
   } catch (error) {
     console.error(error)
   }
@@ -18,5 +30,5 @@ if (process.contextIsolated) {
   // @ts-ignore (define in dts)
   window.electron = electronAPI
   // @ts-ignore (define in dts)
-  window.api = api
+  window.vibelearn = vibelearn
 }
